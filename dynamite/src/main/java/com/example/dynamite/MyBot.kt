@@ -75,17 +75,20 @@ class MyBot : Bot {
         } else false
     }
 
-    private fun testDynamiteFirst(prevP2Moves: List<Move>, rounds: List<Round>): Boolean {
-        return if (rounds.size > 10) {
-            Collections.frequency(prevP2Moves, Move.D)== rounds.size
+    private fun dynamiteFirst(prevP2Moves: List<Move>, rounds: List<Round>): Boolean {
+        return if (rounds.size > 15) {
+            Collections.frequency(prevP2Moves, Move.D) == rounds.size
         } else false
     }
 
-    private fun testDynOnDraw(prevP2Moves: List<Move>, prevResults: List<String>, dynLeft2: Int, prevRes: String): Boolean {
+    private fun dynOnDraw(prevP2Moves: List<Move>, prevResults: List<String>, dynLeft2: Int, prevRes: String): Boolean {
         var dynDraws = 0
         var draws = 0
+        if (prevP2Moves.size < 2) {
+            return false
+        }
         for (move in prevP2Moves) {
-            if (move == Move.D && prevResults[prevP2Moves.indexOf(move) - 1] == "Draw") dynDraws += 1
+            if (move == Move.D && prevResults[prevP2Moves.lastIndexOf(move) - 1] == "Draw") dynDraws += 1
         }
         for (item in prevResults) {
             if (item == "Draw") draws += 1
@@ -111,8 +114,7 @@ class MyBot : Bot {
         } else {
             val prevResults = getPrevResults(gamestate)
             val prevP2Moves = getP2Moves(gamestate)
-            val prevRound: Round = rounds[rounds.size - 1]
-            val prevRes = prevResults[prevResults.size - 1]
+            val prevRes = prevResults.last()
             //get dyn left
             var dynLeft1 = 100
             var dynLeft2 = 100
@@ -126,9 +128,8 @@ class MyBot : Bot {
                     dynLeft2 -= 1
                 }
             }
-            return if (testDynamiteFirst(prevP2Moves, rounds)) {
-                w
-            } else if (testDynOnDraw(prevP2Moves, prevResults, dynLeft2, prevRes)) {
+
+            return if (dynOnDraw(prevP2Moves, prevResults, dynLeft2, prevRes)) {
                 w
             } else if (rockBot(prevP2Moves, rounds)) {
                 p
@@ -136,6 +137,8 @@ class MyBot : Bot {
                 s
             } else if (scissorsBot(prevP2Moves, rounds)) {
                 r
+            } else if (dynamiteFirst(prevP2Moves, rounds)) {
+                w
             } else {
                 getRandomNonWMove()
             }
