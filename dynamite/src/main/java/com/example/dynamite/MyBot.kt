@@ -32,24 +32,18 @@ class MyBot : Bot {
         for (round in rounds) {
             val p1 = round.p1
             val p2 = round.p2
-            if (p1 == Move.D && p2 != Move.W) {
+            if (p1 == p2) {
+                prevResults = prevResults + "Draw"
+            } else if (p1 == Move.D && p2 != Move.W) {
                 prevResults = prevResults + "Won"
             } else if (p1 == Move.W && p2 == Move.D) {
                 prevResults = prevResults + "Won"
-            } else if (p1 == Move.R && p2 != Move.P) {
+            } else if (p1 == Move.R && p2 != Move.P && p2 != Move.D) {
                 prevResults = prevResults + "Won"
-            } else if (p1 == Move.R && p2 != Move.D) {
+            } else if (p1 == Move.P && p2 != Move.R && p2 != Move.D) {
                 prevResults = prevResults + "Won"
-            } else if (p1 == Move.P && p2 != Move.R) {
+            } else if (p1 == Move.S && p2 != Move.R && p2 != Move.D) {
                 prevResults = prevResults + "Won"
-            } else if (p1 == Move.P && p2 != Move.D) {
-                prevResults = prevResults + "Won"
-            } else if (p1 == Move.S && p2 != Move.R) {
-                prevResults = prevResults + "Won"
-            } else if (p1 == Move.S && p2 != Move.D) {
-                prevResults = prevResults + "Won"
-            } else if (p1 == p2) {
-                prevResults = prevResults + "Draw"
             } else {
                 prevResults = prevResults + "Lost"
             }
@@ -75,21 +69,10 @@ class MyBot : Bot {
         return p2Moves
     }
 
-    private fun rockBot(prevP2Moves: List<Move>): Boolean {
+    private fun repetitiveBot(prevP2Moves: List<Move>): Boolean {
         return if (prevP2Moves.size > 50) {
-            Collections.frequency(prevP2Moves, Move.R) == prevP2Moves.size
-        } else false
-    }
-
-    private fun paperBot(prevP2Moves: List<Move>): Boolean {
-        return if (prevP2Moves.size > 50) {
-            Collections.frequency(prevP2Moves, Move.P) == prevP2Moves.size
-        } else false
-    }
-
-    private fun scissorsBot(prevP2Moves: List<Move>): Boolean {
-        return if (prevP2Moves.size > 50) {
-            Collections.frequency(prevP2Moves, Move.S) == prevP2Moves.size
+            val lastThree = prevP2Moves.takeLast(3)
+            lastThree[0] == lastThree[1] && lastThree[0] == lastThree[2]
         } else false
     }
 
@@ -197,9 +180,8 @@ class MyBot : Bot {
         val s = Move.S
         val d = Move.D
         val w = Move.W
-        var play: Move
         if (rounds.size == 0) {
-            play = d
+            return d
         } else {
             val prevResults = getPrevResults(gamestate)
             val prevP1Moves = getP1Moves(gamestate)
@@ -219,35 +201,40 @@ class MyBot : Bot {
                 }
             }
 
-             if (rockBot(prevP2Moves)) {
-                play = p
-            } else if (paperBot(prevP2Moves)) {
-                 play = s
-            } else if (scissorsBot(prevP2Moves)) {
-                 play = r
+            if (repetitiveBot(prevP2Moves)) {
+                 if (prevP2Moves.last() == r) {
+                     return p
+                 } else if (prevP2Moves.last() == p) {
+                     return s
+                 } else if (prevP2Moves.last() == s) {
+                     return r
+                 } else if (prevP2Moves.last() == d) {
+                     return w
+                 } else {
+                     return getRandomRPSMove()
+                 }
             } else if (dynamiteFirst(prevP2Moves)) {
-                 play = w
+                 return w
             } else if (dynOnDraw(prevP2Moves, prevResults, dynLeft2, prevRes)) {
                 if (prevRes == "Draw") {
-                    play = w
+                    return w
                 } else if (dynLeft1 > 0) {
-                    play = d
+                    return d
                 } else {
-                    play = getRandomRPSMove()
+                    return getRandomRPSMove()
                 }
             } else if (randomRPSBot(prevP2Moves)) {
                 if (dynLeft1 > 0) {
-                    play = d
+                    return d
                 } else {
-                    play = getRandomRPSMove()
+                    return getRandomRPSMove()
                 }
             } else if (beatTheirPreviousMoveBot(prevP1Moves, prevP2Moves, prevResults, dynLeft2)) {
-                 play = getBeatPreviousMoveBot(prevP1Moves, dynLeft1)
+                 return getBeatPreviousMoveBot(prevP1Moves, dynLeft1)
             } else {
-                 play = dynDependentMove(dynLeft1, dynLeft2)
+                 return dynDependentMove(dynLeft1, dynLeft2)
             }
         }
-        return play
     }
 
     init {
