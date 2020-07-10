@@ -75,23 +75,17 @@ class MyBot : Bot {
     }
 
     private fun repetitiveBot(prevP2Moves: List<Move>): Boolean {
-        return if (prevP2Moves.size > 20) {
+        return if (prevP2Moves.size > 15) {
             val lastThree = prevP2Moves.takeLast(3)
             lastThree[0] == lastThree[1] && lastThree[0] == lastThree[2]
         } else false
     }
 
     private fun randomRPSBot(prevP2Moves: List<Move>): Boolean {
-        return Move.D !in prevP2Moves && prevP2Moves.size > 50
+        return (Move.D !in prevP2Moves.takeLast(30) && prevP2Moves.size > 30)
     }
 
-
-    private fun dynOnDraw(
-        prevP2Moves: List<Move>,
-        prevResults: List<String>,
-        dynLeft2: Int,
-        prevRes: String
-    ): Boolean {
+    private fun dynOnDraw(prevP2Moves: List<Move>, prevResults: List<String>, dynLeft2: Int): Boolean {
         var dynDraws = 0
         var draws = 0
         for (i in 1 until prevP2Moves.size) {
@@ -114,10 +108,12 @@ class MyBot : Bot {
             return false
         }
         var count = 0
-        for (i in 1 until prevP1Moves.size) {
-            if (getSingleResult(prevP2Moves[i], prevP1Moves[i-1]) == "Won") count +=1
+        val lastTwentyP1 = prevP1Moves.takeLast(20)
+        val lastTwentyP2 = prevP2Moves.takeLast(20)
+        for (i in 1 until lastTwentyP1.size) {
+            if (getSingleResult(lastTwentyP2[i], lastTwentyP1[i-1]) == "Won") count +=1
         }
-        return count > prevP1Moves.size - 10
+        return count >= lastTwentyP1.size - 3
     }
 
     private fun getBeatPreviousMoveBot(prevP1Moves: List<Move>, dynLeft1: Int): Move {
@@ -188,20 +184,21 @@ class MyBot : Bot {
                     dynLeft2 -= 1
                 }
             }
-
-            if (repetitiveBot(prevP2Moves)) {
+            if (repetitiveBot(prevP2Moves) && prevP2Moves.last() == d) {
+                return w
+            } else if (beatTheirPreviousMoveBot(prevP1Moves, prevP2Moves)) {
+                return getBeatPreviousMoveBot(prevP1Moves, dynLeft1)
+            } else if (repetitiveBot(prevP2Moves)) {
                  if (prevP2Moves.last() == r) {
                      return p
                  } else if (prevP2Moves.last() == p) {
                      return s
                  } else if (prevP2Moves.last() == s) {
                      return r
-                 } else if (prevP2Moves.last() == d) {
-                     return w
                  } else {
                      return getRandomRPSMove()
                  }
-            } else if (dynOnDraw(prevP2Moves, prevResults, dynLeft2, prevRes)) {
+            } else if (dynOnDraw(prevP2Moves, prevResults, dynLeft2)) {
                 if (prevRes == "Draw") {
                     return w
                 } else if (dynLeft1 > 0) {
@@ -215,10 +212,10 @@ class MyBot : Bot {
                 } else {
                     return getRandomRPSMove()
                 }
-            } else if (beatTheirPreviousMoveBot(prevP1Moves, prevP2Moves)) {
-                 return getBeatPreviousMoveBot(prevP1Moves, dynLeft1)
-            } else {
+            } else if (Collections.frequency(prevResults, "Won") > 0.5 * prevResults.size){
                  return dynDependentMove(dynLeft1, dynLeft2, prevResults)
+            } else {
+                return getBeatPreviousMoveBot(prevP2Moves, dynLeft1)
             }
         }
     }
