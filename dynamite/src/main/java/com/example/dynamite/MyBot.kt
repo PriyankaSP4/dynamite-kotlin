@@ -7,23 +7,42 @@ import java.util.Collections
 
 class MyBot : Bot {
     private fun getRandomMove(): Move {
-        val nums = listOf(Move.R, Move.P, Move.S, Move.D, Move.W)
-        return nums.shuffled().first()
+        val moves = listOf(Move.R, Move.P, Move.S, Move.D, Move.W)
+        return moves.shuffled().first()
     }
 
     private fun getRandomNonWMove(): Move {
-        val nums = listOf(Move.R, Move.P, Move.S, Move.D)
-        return nums.shuffled().first()
+        val moves = listOf(Move.R, Move.P, Move.S, Move.D)
+        return moves.shuffled().first()
     }
 
     private fun getRandomNonDMove(): Move {
-        val nums = listOf(Move.R, Move.P, Move.S, Move.W)
-        return nums.shuffled().first()
+        val moves = listOf(Move.R, Move.P, Move.S, Move.W)
+        return moves.shuffled().first()
     }
 
     private fun getRandomRPSMove(): Move {
-        val nums = listOf(Move.R, Move.P, Move.S)
-        return nums.shuffled().first()
+        val moves = listOf(Move.R, Move.P, Move.S)
+        return moves.shuffled().first()
+    }
+    private fun getSingleResult(p1: Move, p2: Move): String {
+        return if (p1 == p2) {
+            "Draw"
+        } else if (p1 == Move.D && p2 != Move.W) {
+            "Won"
+        } else if (p1 == Move.W && p2 == Move.D) {
+            "Won"
+        } else if (p1 != Move.W && p2 == Move.D) {
+            "Lost"
+        } else if (p1 == Move.R && p2 != Move.P) {
+            "Won"
+        } else if (p1 == Move.P && p2 != Move.S) {
+            "Won"
+        } else if (p1 == Move.S && p2 != Move.R) {
+            "Won"
+        } else {
+            "Lost"
+        }
     }
 
     private fun getPrevResults(gamestate: Gamestate): List<String> {
@@ -32,21 +51,7 @@ class MyBot : Bot {
         for (round in rounds) {
             val p1 = round.p1
             val p2 = round.p2
-            if (p1 == p2) {
-                prevResults = prevResults + "Draw"
-            } else if (p1 == Move.D && p2 != Move.W) {
-                prevResults = prevResults + "Won"
-            } else if (p1 == Move.W && p2 == Move.D) {
-                prevResults = prevResults + "Won"
-            } else if (p1 == Move.R && p2 != Move.P && p2 != Move.D) {
-                prevResults = prevResults + "Won"
-            } else if (p1 == Move.P && p2 != Move.R && p2 != Move.D) {
-                prevResults = prevResults + "Won"
-            } else if (p1 == Move.S && p2 != Move.R && p2 != Move.D) {
-                prevResults = prevResults + "Won"
-            } else {
-                prevResults = prevResults + "Lost"
-            }
+            prevResults = prevResults + getSingleResult(p1, p2)
         }
         return prevResults
     }
@@ -70,7 +75,7 @@ class MyBot : Bot {
     }
 
     private fun repetitiveBot(prevP2Moves: List<Move>): Boolean {
-        return if (prevP2Moves.size > 50) {
+        return if (prevP2Moves.size > 20) {
             val lastThree = prevP2Moves.takeLast(3)
             lastThree[0] == lastThree[1] && lastThree[0] == lastThree[2]
         } else false
@@ -80,11 +85,6 @@ class MyBot : Bot {
         return Move.D !in prevP2Moves && prevP2Moves.size > 50
     }
 
-    private fun dynamiteFirst(prevP2Moves: List<Move>): Boolean {
-        return if (prevP2Moves.size > 10) {
-            Collections.frequency(prevP2Moves, Move.D) == prevP2Moves.size
-        } else false
-    }
 
     private fun dynOnDraw(
         prevP2Moves: List<Move>,
@@ -109,40 +109,20 @@ class MyBot : Bot {
         return draws - dynDraws == 0
     }
 
-    private fun beatTheirPreviousMoveBot(
-        prevP1Moves: List<Move>,
-        prevP2Moves: List<Move>,
-        prevResults: List<String>,
-        dynLeft2: Int
-    ): Boolean {
-        if (prevP2Moves.size < 10) {
-            return false
-        }
-        if (dynLeft2 <= 0) {
+    private fun beatTheirPreviousMoveBot(prevP1Moves: List<Move>, prevP2Moves: List<Move>): Boolean {
+        if (prevP2Moves.size < 20) {
             return false
         }
         var count = 0
-        for (i in 1 until prevResults.size) {
-            if (prevP2Moves[i] == Move.D && prevP1Moves[i - 1] != Move.W) {
-                count += 1
-            } else if (prevP2Moves[i] == Move.R && prevP1Moves[i - 1] == Move.S) {
-                count += 1
-            } else if (prevP2Moves[i] == Move.P && prevP1Moves[i - 1] == Move.R) {
-                count += 1
-            } else if (prevP2Moves[i] == Move.S && prevP1Moves[i - 1] == Move.P) {
-                count += 1
-            } else if (prevP2Moves[i] == Move.W && prevP1Moves[i - 1] == Move.D) {
-                count += 1
-            }
+        for (i in 1 until prevP1Moves.size) {
+            if (getSingleResult(prevP2Moves[i], prevP1Moves[i-1]) == "Won") count +=1
         }
-        return count == prevResults.size - 1
+        return count > prevP1Moves.size - 10
     }
 
     private fun getBeatPreviousMoveBot(prevP1Moves: List<Move>, dynLeft1: Int): Move {
         val last = prevP1Moves.last()
-        if (last != Move.D && dynLeft1 > 0) {
-            return Move.D
-        }
+        if (dynLeft1 > 0 && last != Move.D) return Move.D
         return if (last == Move.R) {
             Move.S
         } else if (last == Move.P) {
@@ -150,17 +130,25 @@ class MyBot : Bot {
         } else if (last == Move.S) {
             Move.P
         } else if (last == Move.D) {
-            Move.R
+            getRandomRPSMove()
         } else {
             Move.P
         }
     }
 
-    private fun dynDependentMove(dynLeft1: Int, dynLeft2: Int): Move {
+    private fun dynDependentMove(dynLeft1: Int, dynLeft2: Int, prevResults: List<String>): Move {
         return if (dynLeft1 > 0 && dynLeft2 > 0) {
-            getRandomMove()
+            if (Collections.frequency(prevResults, "Won") > prevResults.size * 0.7) {
+                getRandomNonDMove()
+            } else {
+                getRandomMove()
+            }
         } else if (dynLeft1 > 0 && dynLeft2 <= 0) {
-            getRandomNonWMove()
+            if (Collections.frequency(prevResults, "Won") > prevResults.size * 0.7) {
+                getRandomRPSMove()
+            } else {
+                getRandomNonWMove()
+            }
         } else if (dynLeft1 <= 0 && dynLeft2 > 0) {
             getRandomNonDMove()
         } else {
@@ -213,8 +201,6 @@ class MyBot : Bot {
                  } else {
                      return getRandomRPSMove()
                  }
-            } else if (dynamiteFirst(prevP2Moves)) {
-                 return w
             } else if (dynOnDraw(prevP2Moves, prevResults, dynLeft2, prevRes)) {
                 if (prevRes == "Draw") {
                     return w
@@ -229,10 +215,10 @@ class MyBot : Bot {
                 } else {
                     return getRandomRPSMove()
                 }
-            } else if (beatTheirPreviousMoveBot(prevP1Moves, prevP2Moves, prevResults, dynLeft2)) {
+            } else if (beatTheirPreviousMoveBot(prevP1Moves, prevP2Moves)) {
                  return getBeatPreviousMoveBot(prevP1Moves, dynLeft1)
             } else {
-                 return dynDependentMove(dynLeft1, dynLeft2)
+                 return dynDependentMove(dynLeft1, dynLeft2, prevResults)
             }
         }
     }
